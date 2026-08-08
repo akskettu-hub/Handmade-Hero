@@ -17,11 +17,11 @@ typedef struct {
 
 } Framebuffer;
 
-static void render(Framebuffer *buffer) {
+static void render(Framebuffer *buffer, int y_offset, int x_offset) {
   for (int y = 0; y < buffer->height; y++) {
     for (int x = 0; x < buffer->width; x++) {
-      uint8_t red = (uint8_t)(x * 255 / buffer->width);
-      uint8_t green = (uint8_t)(y * 255 / buffer->height);
+      uint8_t red = (uint8_t)(x * 255 / buffer->width + x_offset);
+      uint8_t green = (uint8_t)(y * 255 / buffer->height + y_offset);
       uint8_t blue = 128;
 
       uint32_t pixel =
@@ -89,9 +89,6 @@ int main(void) {
       display, RootWindow(display, screen), 100, 100, width, height, 1,
       BlackPixel(display, screen), WhitePixel(display, screen));
 
-  // printf("Screen: %dx%d\n", DisplayWidth(display, screen),
-  //       DisplayHeight(display, screen));
-
   XStoreName(display, window, "Handmade");
 
   XSelectInput(display, window,
@@ -108,7 +105,10 @@ int main(void) {
     return 1;
   }
 
-  render(&buffer);
+  int x_offset = 0;
+  int y_offset = 0;
+
+  render(&buffer, y_offset, x_offset);
 
   int running = 1;
 
@@ -120,35 +120,25 @@ int main(void) {
       if (event.type == KeyPress) {
         running = 0;
       }
-      if (event.type == ConfigureNotify) {
 
+      if (event.type == ConfigureNotify) {
         int new_width = event.xconfigure.width;
         int new_height = event.xconfigure.height;
 
         if (new_width != buffer.width || new_height != buffer.height) {
           resize_framebuffer(display, screen, &buffer, new_width, new_height);
         }
-        render(&buffer);
+        // render(&buffer, y_offset, x_offset);
       }
     }
+    render(&buffer, y_offset, x_offset);
+
     XPutImage(display, window, DefaultGC(display, screen), buffer.image, 0, 0,
               0, 0, buffer.width, buffer.height);
+    // y_offset++;
+    x_offset++;
   }
 
-  /*
-  for (;;) {
-    XEvent event;
-    XNextEvent(display, &event);
-
-    if (event.type == Expose) {
-      XClearWindow(display, window);
-    }
-
-    if (event.type == KeyPress) {
-      break;
-    }
-  }
-  */
   XDestroyImage(buffer.image);
 
   XDestroyWindow(display, window);
