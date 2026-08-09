@@ -18,6 +18,13 @@ typedef struct {
   XImage *image;
 } Framebuffer;
 
+typedef struct {
+  int up;
+  int down;
+  int left;
+  int right;
+} GameInput;
+
 static void render(Framebuffer *buffer, uint8_t y_offset, uint8_t x_offset) {
   for (int y = 0; y < buffer->height; y++) {
     for (int x = 0; x < buffer->width; x++) {
@@ -67,13 +74,6 @@ static int resize_framebuffer(Display *display, int screen, Framebuffer *buffer,
   return 1;
 }
 
-typedef struct {
-  int up;
-  int down;
-  int left;
-  int right;
-} GameInput;
-
 int main(void) {
   Display *display = XOpenDisplay(NULL); // Establish connection to X server
 
@@ -84,7 +84,7 @@ int main(void) {
   Bool detectable_auto_repeat;
 
   if (!XkbSetDetectableAutoRepeat(display, True, &detectable_auto_repeat)) {
-    fprintf(stderr, "Could not detect auto repeat.");
+    fprintf(stderr, "Could not detect auto repeat.\n");
   }
 
   int screen = DefaultScreen(display); // Figure out which srcreen is used
@@ -191,13 +191,13 @@ int main(void) {
         if (new_width != buffer.width || new_height != buffer.height) {
           resize_framebuffer(display, screen, &buffer, new_width, new_height);
         }
-        // render(&buffer, y_offset, x_offset);
       }
     }
     render(&buffer, y_offset, x_offset);
 
     XPutImage(display, window, DefaultGC(display, screen), buffer.image, 0, 0,
               0, 0, buffer.width, buffer.height);
+
     // y_offset++;
     x_offset++;
   }
