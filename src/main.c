@@ -1,6 +1,8 @@
 #include <X11/X.h>
+#include <X11/XKBlib.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/keysym.h>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -14,10 +16,9 @@ typedef struct {
 
   uint32_t *pixels;
   XImage *image;
-
 } Framebuffer;
 
-static void render(Framebuffer *buffer, int y_offset, int x_offset) {
+static void render(Framebuffer *buffer, uint8_t y_offset, uint8_t x_offset) {
   for (int y = 0; y < buffer->height; y++) {
     for (int x = 0; x < buffer->width; x++) {
       uint8_t red = (uint8_t)(x * 255 / buffer->width + x_offset);
@@ -66,12 +67,24 @@ static int resize_framebuffer(Display *display, int screen, Framebuffer *buffer,
   return 1;
 }
 
+typedef struct {
+  int up;
+  int down;
+  int left;
+  int right;
+} GameInput;
+
 int main(void) {
   Display *display = XOpenDisplay(NULL); // Establish connection to X server
 
   if (!display) {
     fprintf(stderr, "Could not open X display\n");
     return 1;
+  }
+  Bool detectable_auto_repeat;
+
+  if (!XkbSetDetectableAutoRepeat(display, True, &detectable_auto_repeat)) {
+    fprintf(stderr, "Could not detect auto repeat.");
   }
 
   int screen = DefaultScreen(display); // Figure out which srcreen is used
@@ -105,8 +118,10 @@ int main(void) {
     return 1;
   }
 
-  int x_offset = 0;
-  int y_offset = 0;
+  GameInput game_input;
+
+  uint8_t x_offset = 0;
+  uint8_t y_offset = 0;
 
   render(&buffer, y_offset, x_offset);
 
@@ -118,7 +133,55 @@ int main(void) {
       XNextEvent(display, &event);
 
       if (event.type == KeyPress) {
-        running = 0;
+        KeySym key = XLookupKeysym(&event.xkey, 0);
+
+        if (key == XK_Escape) {
+          running = 0;
+        }
+
+        if (key == XK_w) {
+          game_input.up = 1;
+          printf("game_input.up = %d\n", game_input.up);
+        }
+
+        if (key == XK_s) {
+          game_input.down = 1;
+          printf("game_input.down = %d\n", game_input.down);
+        }
+
+        if (key == XK_a) {
+          game_input.left = 1;
+          printf("game_input.left = %d\n", game_input.left);
+        }
+
+        if (key == XK_d) {
+          game_input.right = 1;
+          printf("game_input.right = %d\n", game_input.right);
+        }
+      }
+
+      if (event.type == KeyRelease) {
+        KeySym key = XLookupKeysym(&event.xkey, 0);
+
+        if (key == XK_w) {
+          game_input.up = 0;
+          printf("game_input.up = %d\n", game_input.up);
+        }
+
+        if (key == XK_s) {
+          game_input.down = 0;
+          printf("game_input.down = %d\n", game_input.down);
+        }
+
+        if (key == XK_a) {
+          game_input.left = 0;
+          printf("game_input.left = %d\n", game_input.left);
+        }
+
+        if (key == XK_d) {
+          game_input.right = 0;
+          printf("game_input.right = %d\n", game_input.right);
+        }
       }
 
       if (event.type == ConfigureNotify) {
