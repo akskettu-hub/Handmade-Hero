@@ -1,3 +1,5 @@
+#include "platform_audio.h"
+
 #include <X11/X.h>
 #include <X11/XKBlib.h>
 #include <X11/Xlib.h>
@@ -86,6 +88,19 @@ int main(void) {
   if (!XkbSetDetectableAutoRepeat(display, True, &detectable_auto_repeat)) {
     fprintf(stderr, "Could not detect auto repeat.\n");
   }
+
+  // Init audio
+  AudioState *audio = audio_init();
+
+  if (!audio) {
+    fprintf(stderr, "Could not initialise audio\n");
+    return 1;
+  }
+
+#define AUDIO_FRAMES 1024
+  int16_t audio_buffer[AUDIO_FRAMES * 2];
+
+  // End of init audio
 
   int screen = DefaultScreen(display); // Figure out which srcreen is used
 
@@ -200,7 +215,11 @@ int main(void) {
 
     // y_offset++;
     x_offset++;
+
+    audio_generate(audio, audio_buffer, AUDIO_FRAMES);
+    audio_output(audio, audio_buffer, AUDIO_FRAMES);
   }
+  audio_shutdown(audio);
 
   XDestroyImage(buffer.image);
 
