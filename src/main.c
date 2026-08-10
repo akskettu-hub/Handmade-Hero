@@ -79,9 +79,6 @@ static int resize_framebuffer(Display *display, int screen, Framebuffer *buffer,
   return 1;
 }
 
-#define AUDIO_LATECY_TARGET 4800
-#define AUDIO_FRAMES 4800
-
 int main(void) {
   Display *display = XOpenDisplay(NULL); // Establish connection to X server
 
@@ -89,6 +86,7 @@ int main(void) {
     fprintf(stderr, "Could not open X display\n");
     return 1;
   }
+
   Bool detectable_auto_repeat;
 
   if (!XkbSetDetectableAutoRepeat(display, True, &detectable_auto_repeat)) {
@@ -103,8 +101,8 @@ int main(void) {
     return 1;
   }
 
-  int16_t audio_buffer[AUDIO_FRAMES * 2];
-  printf("size of audio buffer: %ld\n", sizeof(audio_buffer));
+  // int16_t audio_buffer[AUDIO_FRAMES * 2];
+  //  printf("size of audio buffer: %ld\n", sizeof(audio_buffer));
 
   // End of init audio
 
@@ -223,20 +221,16 @@ int main(void) {
     x_offset++;
 
     // audio
-    //
 
     struct timespec tic;
     struct timespec toc;
 
     clock_gettime(CLOCK_MONOTONIC, &tic);
-    // audio_generate(audio, audio_buffer, AUDIO_FRAMES);
-    // audio_output(audio, audio_buffer, AUDIO_FRAMES);
-    audio_update(audio, audio_buffer);
+    audio_update(audio);
     clock_gettime(CLOCK_MONOTONIC, &toc);
 
     long long elapsed =
         (toc.tv_sec - tic.tv_sec) * 1000000000LL + (toc.tv_nsec - tic.tv_nsec);
-    //(toc.tv_sec - tic.tv_sec) * 1000000000LL + (toc.tv_nsec - tic.tv_nsec);
 
     printf("Audio time: %lld ns\n", elapsed);
     // end of audio

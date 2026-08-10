@@ -16,6 +16,11 @@ struct AudioState { // represents audio device and its current state
   double phase; // phase lives between calls and so belongs in persistent audio
                 // state
   double frequency;
+
+  int16_t *buffer;
+
+  snd_pcm_uframes_t buffer_size;
+  snd_pcm_uframes_t period_size;
 };
 
 AudioState *audio_init(void) {
@@ -39,6 +44,7 @@ AudioState *audio_init(void) {
   audio->phase = 0.0;
   audio->frequency = 440.0;
   // audio->buffer_size = 4800;
+  audio->buffer = malloc(4800 * 2 * sizeof(int16_t));
 
   result = snd_pcm_set_params(audio->pcm, SND_PCM_FORMAT_S16_LE,
                               SND_PCM_ACCESS_RW_INTERLEAVED, audio->channels,
@@ -54,6 +60,13 @@ AudioState *audio_init(void) {
     return NULL;
   }
 
+  result =
+      snd_pcm_get_params(audio->pcm, &audio->buffer_size, &audio->period_size);
+
+  if (result < 0) {
+    fprintf(stderr, "Could not get pmc buffer or period size: %s\n",
+            snd_strerror(result));
+  }
   return audio;
 }
 
@@ -62,16 +75,18 @@ void audio_shutdown(AudioState *audio) {
     snd_pcm_drain(audio->pcm);
     snd_pcm_close(audio->pcm);
     // audio->pcm = NULL;
+    free(audio->buffer);
     free(audio);
   }
 }
+
 #define TARGET 4800
 
-void audio_update(AudioState *audio, int16_t *buffer) {
+void audio_update(AudioState *audio) {
   snd_pcm_sframes_t available = snd_pcm_avail_update(audio->pcm);
   // printf("Available: %ld\n", available);
 
-  long queued = 24000L - available;
+  long queued = audio->buffer_size - available;
 
   // printf("Available: %ld, Queued: %ld, State: %s\n", available, queued,
   //       snd_pcm_state_name(snd_pcm_state(audio->pcm)));
@@ -81,8 +96,8 @@ void audio_update(AudioState *audio, int16_t *buffer) {
     long frames_to_generate = TARGET - queued;
     // printf("Frames to generate: %ld\n", frames_to_generate);
 
-    audio_generate(audio, buffer, frames_to_generate);
-    audio_output(audio, buffer, frames_to_generate);
+    audio_generate(audio, audio->buffer, frames_to_generate);
+    audio_output(audio, audio->buffer, frames_to_generate);
   }
 }
 
@@ -105,7 +120,6 @@ void audio_generate(AudioState *audio, int16_t *buffer, int frames) {
 
 int audio_output(AudioState *audio, int16_t *buffer, int frames) {
   snd_pcm_sframes_t written = snd_pcm_writei(audio->pcm, buffer, frames);
-  // printf("PCM state: %s\n", snd_pcm_state_name(snd_pcm_state(audio->pcm)));
 
   if (written < 0) {
     written = snd_pcm_recover(audio->pcm, written, 0);
