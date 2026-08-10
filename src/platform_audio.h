@@ -8,6 +8,7 @@ typedef struct AudioState AudioState;
 AudioState *audio_init(void);
 void audio_generate(AudioState *audio, int16_t *buffer, int frames);
 int audio_output(AudioState *audio, int16_t *buffer, int frames);
+void audio_update(AudioState *audio, int16_t *buffer);
 void audio_shutdown(AudioState *audio);
 
 #endif

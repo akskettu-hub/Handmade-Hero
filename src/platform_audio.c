@@ -2,6 +2,7 @@
 
 #include <alsa/asoundlib.h>
 #include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -37,6 +38,7 @@ AudioState *audio_init(void) {
   audio->channels = 2;
   audio->phase = 0.0;
   audio->frequency = 440.0;
+  // audio->buffer_size = 4800;
 
   result = snd_pcm_set_params(audio->pcm, SND_PCM_FORMAT_S16_LE,
                               SND_PCM_ACCESS_RW_INTERLEAVED, audio->channels,
@@ -63,6 +65,26 @@ void audio_shutdown(AudioState *audio) {
     free(audio);
   }
 }
+#define TARGET 4800
+
+void audio_update(AudioState *audio, int16_t *buffer) {
+  snd_pcm_sframes_t available = snd_pcm_avail_update(audio->pcm);
+  // printf("Available: %ld\n", available);
+
+  long queued = 24000L - available;
+
+  // printf("Available: %ld, Queued: %ld, State: %s\n", available, queued,
+  //       snd_pcm_state_name(snd_pcm_state(audio->pcm)));
+
+  if (queued < TARGET) {
+
+    long frames_to_generate = TARGET - queued;
+    // printf("Frames to generate: %ld\n", frames_to_generate);
+
+    audio_generate(audio, buffer, frames_to_generate);
+    audio_output(audio, buffer, frames_to_generate);
+  }
+}
 
 void audio_generate(AudioState *audio, int16_t *buffer, int frames) {
   for (int frame = 0; frame < frames; frame++) {
@@ -83,6 +105,7 @@ void audio_generate(AudioState *audio, int16_t *buffer, int frames) {
 
 int audio_output(AudioState *audio, int16_t *buffer, int frames) {
   snd_pcm_sframes_t written = snd_pcm_writei(audio->pcm, buffer, frames);
+  // printf("PCM state: %s\n", snd_pcm_state_name(snd_pcm_state(audio->pcm)));
 
   if (written < 0) {
     written = snd_pcm_recover(audio->pcm, written, 0);
@@ -92,5 +115,15 @@ int audio_output(AudioState *audio, int16_t *buffer, int frames) {
     fprintf(stderr, "Audio write failed %s\n", snd_strerror(written));
     return 0;
   }
+
+  if (snd_pcm_state(audio->pcm) == SND_PCM_STATE_PREPARED) {
+    int result = snd_pcm_start(audio->pcm);
+
+    if (result < 0) {
+      fprintf(stderr, "Could not start audio: %s\n", snd_strerror(result));
+      return 0;
+    }
+  }
+
   return 1;
 }
