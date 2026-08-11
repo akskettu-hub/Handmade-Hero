@@ -6,7 +6,6 @@
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
 
-#include <alsa/asoundlib.h>
 #include <bits/time.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -79,6 +78,9 @@ static int resize_framebuffer(Display *display, int screen, Framebuffer *buffer,
   return 1;
 }
 
+#define AUDIO_GENERATE_BUFFER_FRAMES 4096
+#define AUDIO_OUTPUT_BUFFER_FRAMES 4096
+
 int main(void) {
   Display *display = XOpenDisplay(NULL); // Establish connection to X server
 
@@ -100,6 +102,9 @@ int main(void) {
     fprintf(stderr, "Could not initialise audio\n");
     return 1;
   }
+
+  int16_t temp_buffer[AUDIO_GENERATE_BUFFER_FRAMES * 2];
+  int16_t temp_output_buffer[AUDIO_OUTPUT_BUFFER_FRAMES * 2];
 
   // int16_t audio_buffer[AUDIO_FRAMES * 2];
   //  printf("size of audio buffer: %ld\n", sizeof(audio_buffer));
@@ -226,14 +231,14 @@ int main(void) {
     struct timespec toc;
 
     clock_gettime(CLOCK_MONOTONIC, &tic);
-    audio_update(audio);
+    audio_update(audio, temp_buffer, temp_output_buffer);
     clock_gettime(CLOCK_MONOTONIC, &toc);
 
     long long elapsed =
         (toc.tv_sec - tic.tv_sec) * 1000000000LL + (toc.tv_nsec - tic.tv_nsec);
 
-    printf("Audio time: %lld ns\n", elapsed);
-    // end of audio
+    // printf("Audio time: %lld ns\n", elapsed);
+    //  end of audio
   }
   audio_shutdown(audio);
 
