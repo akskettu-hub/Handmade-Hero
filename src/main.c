@@ -247,5 +247,7 @@ int main(void) {
   XDestroyWindow(display, window);
   XCloseDisplay(display);
 
+  printf("Exited nicely :)\n");
+
   return 0;
 }

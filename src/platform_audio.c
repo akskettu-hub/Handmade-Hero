@@ -8,7 +8,7 @@
 #include <time.h>
 
 typedef struct {
-  int16_t *buffer;
+  int16_t *buffer; // NOTE: The buffer pointed to by this needs to be allocated!
 
   int capacity;       // Number of frames the buffer can hold
   int read_position;  // Where ALSA will get its next frame
@@ -43,16 +43,6 @@ AudioState *audio_init(void) {
     return NULL;
   }
 
-  /*
-  AudioRingBuffer ring = {
-      .buffer = audio_ring_memory,
-      .capacity = AUDIO_RING_FRAMES,
-      .read_position = 0,
-      .write_position = 0,
-      .count = 0,
-  };
-   */
-
   int result = snd_pcm_open(&audio->pcm, "default", SND_PCM_STREAM_PLAYBACK, 0);
 
   if (result < 0) {
@@ -66,7 +56,12 @@ AudioState *audio_init(void) {
   audio->phase = 0.0;
   audio->frequency = 440.0;
 
-  static int16_t audio_ring_memory[AUDIO_RING_FRAMES * 2];
+  int16_t *audio_ring_memory =
+      malloc(AUDIO_RING_FRAMES * audio->channels * sizeof(int16_t));
+
+  if (!audio_ring_memory) {
+    fprintf(stderr, "Could not allocate ring memory\n");
+  }
 
   audio->ring.buffer = audio_ring_memory;
   audio->ring.capacity = AUDIO_RING_FRAMES;
@@ -110,13 +105,6 @@ void audio_shutdown(AudioState *audio) {
 }
 
 int audio_ring_write(AudioRingBuffer *ring, int16_t *source, int frames) {
-  // printf("Writing to your ring.\n");
-  // printf("here\n");
-  printf("RING WRITE START: count=%d, capacity=%d, "
-         "write=%d, read=%d, frames=%d\n",
-         ring->count, ring->capacity, ring->write_position, ring->read_position,
-         frames);
-
   int frames_written = 0;
 
   while (frames_written < frames && ring->count < ring->capacity) {
@@ -128,18 +116,11 @@ int audio_ring_write(AudioRingBuffer *ring, int16_t *source, int frames) {
     ring->write_position++;
 
     if (ring->write_position >= ring->capacity) {
-      printf("ring pos at ring cap\n");
       ring->write_position = 0;
     }
     ring->count++;
     frames_written++;
   }
-  printf(
-
-      "RING WRITE END: count=%d, capacity=%d, "
-      "write=%d, read=%d, written=%d\n",
-      ring->count, ring->capacity, ring->write_position, ring->read_position,
-      frames_written);
   return frames_written;
 }
 
@@ -176,10 +157,6 @@ void audio_update(AudioState *audio, int16_t *temp_buffer,
 
   long queued = audio->buffer_size - available;
 
-  printf("Available: %ld, Queued: %ld, State: %s\n", available, queued,
-         snd_pcm_state_name(snd_pcm_state(audio->pcm)));
-
-  printf("Ring: %d / %d\n", audio->ring.count, audio->ring.capacity);
   int target = audio->sample_rate / 10;
 
   if (audio->ring.count < target) {
@@ -190,49 +167,18 @@ void audio_update(AudioState *audio, int16_t *temp_buffer,
       frames_to_generate = AUDIO_GENERATE_BUFFER_FRAMES;
     }
     audio_generate(audio, temp_buffer, frames_to_generate);
-    printf("Audio_generate: %d\n", frames_to_generate);
 
     int frames_written =
         audio_ring_write(&audio->ring, temp_buffer, frames_to_generate);
 
-    printf("Frames written: %d\n", frames_written);
-
     if (frames_written != frames_to_generate) {
-      fprintf(stderr,
-              "Ring buffer could not accept all generated audio. Written: %d, "
-              "Frames to gen: %d\n",
-              frames_written, frames_to_generate);
-      printf("Ring: %d / %d\n", audio->ring.count, audio->ring.capacity);
-      printf("write_position: %d , read_position %d\n",
-             audio->ring.write_position, audio->ring.read_position);
+      fprintf(stderr, "Ring buffer could not accept all generated audio"
+
+      );
     }
   }
 
-  printf("\n");
-  /*
-  printf("Ring frames writte: %d, read_position: %d, write_position: %d, "
-         "capacity %d/%d\n",
-         frames_written, audio->ring.read_position, audio->ring.write_position,
-         audio->ring.count, audio->ring.capacity);
-   */
-
   int written_pcm = audio_output(audio, temp_output_buffer);
-
-  // int frames_read = audio_ring_read(ring, output_buffer, frames_to_output);
-
-  // if (frames_read > 0) {
-  //   audio_output(audio, output_buffer, frames_to_output);
-  // }
-
-  /*
-  if (queued < TARGET) {
-
-    long frames_to_generate = TARGET - queued;
-
-    audio_generate(audio, audio->buffer, frames_to_generate);
-    audio_output(audio, audio->buffer, frames_to_generate);
-  }
-  */
 }
 
 void audio_generate(AudioState *audio, int16_t *buffer, int frames) {
@@ -250,7 +196,6 @@ void audio_generate(AudioState *audio, int16_t *buffer, int frames) {
       audio->phase -= 1.0;
     }
   }
-  printf("exitign audio gen\n");
 }
 
 int audio_output(AudioState *audio, int16_t *output_buffer) {
@@ -277,12 +222,10 @@ int audio_output(AudioState *audio, int16_t *output_buffer) {
   int frames_read =
       audio_ring_read(&audio->ring, output_buffer, frames_to_output);
 
-  // printf("Frames read from ring: %d \n", frames_read);
   if (frames_read > 0) {
     snd_pcm_sframes_t written =
         snd_pcm_writei(audio->pcm, output_buffer, frames_read);
 
-    // printf("Frames written to PCM: %ld \n", written);
     if (written < 0) {
       written = snd_pcm_recover(audio->pcm, written, 0);
     }
@@ -302,57 +245,5 @@ int audio_output(AudioState *audio, int16_t *output_buffer) {
     }
   }
 
-  // snd_pcm_sframes_t written = snd_pcm_writei(audio->pcm, temp_buffer,
-  // frames);
-
   return 1;
 }
-
-/*
-int main() {
-AudioState *audio = audio_init();
-
-printf("count: %d, write: %d, read: %d\n", audio->ring.count,
-       audio->ring.write_position, audio->ring.read_position);
-
-int16_t temp_buffer[AUDIO_GENERATE_BUFFER_FRAMES * 2];
-int16_t temp_output_buffer[AUDIO_OUTPUT_BUFFER_FRAMES * 2];
-
-for (int i = 0; i < 1000; i++) {
-  audio_update(audio, temp_buffer, temp_output_buffer);
-}
-
-printf("count: %d, write: %d, read: %d\n", audio->ring.count,
-       audio->ring.write_position, audio->ring.read_position);
-int16_t audio_ring_memory[AUDIO_RING_FRAMES * 2];
-
-AudioRingBuffer ring = {
-    .buffer = audio_ring_memory,
-    .capacity = 8,
-    .read_position = 0,
-    .write_position = 0,
-    .count = 0,
-};
-
-int16_t secondary_buffer[8 * 2];
-int16_t destination_buffer[8 * 2];
-
-printf("count: %d, write: %d, read: %d\n", ring.count, ring.write_position,
-       ring.read_position);
-
-audio_ring_write(&ring, secondary_buffer, 4);
-printf("count: %d, write: %d, read: %d\n", ring.count, ring.write_position,
-       ring.read_position);
-
-audio_ring_read(&ring, destination_buffer, 2);
-printf("count: %d, write: %d, read: %d\n", ring.count, ring.write_position,
-       ring.read_position);
-
-audio_ring_write(&ring, secondary_buffer, 6);
-printf("count: %d, write: %d, read: %d\n", ring.count, ring.write_position,
-       ring.read_position);
-
-audio_ring_read(&ring, destination_buffer, 2);
-printf("count: %d, write: %d, read: %d\n", ring.count, ring.write_position,
-       ring.read_position);
-*/
