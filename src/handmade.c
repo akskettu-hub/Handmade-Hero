@@ -1,6 +1,6 @@
 #include "handmade.h"
 
-static void render(Framebuffer *buffer, uint8_t y_offset, uint8_t x_offset) {
+void render(GameRenderBuffer *buffer, uint8_t y_offset, uint8_t x_offset) {
   for (int y = 0; y < buffer->height; y++) {
     for (int x = 0; x < buffer->width; x++) {
       uint8_t red = (uint8_t)(x * 255 / buffer->width + x_offset);

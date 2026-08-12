@@ -12,40 +12,49 @@
 #include <stdlib.h>
 #include <time.h>
 
+#include "handmade.h"
 #include "platform_audio.h"
 
-#include "handmade.c"
-#include "handmade.h"
+typedef struct {
+  uint32_t *pixels;
+  XImage *image;
+} LinuxImage;
 
-static int resize_framebuffer(Display *display, int screen, Framebuffer *buffer,
-                              int width, int height) {
+typedef struct {
+  GameRenderBuffer game_buffer;
+  XImage *image;
+} LinuxFramebuffer;
+
+static int resize_framebuffer(Display *display, int screen,
+                              LinuxFramebuffer *buffer, int width, int height) {
   if (buffer->image) {
     XDestroyImage(buffer->image);
     buffer->image = NULL;
-    buffer->pixels = NULL;
+    buffer->game_buffer.pixels = NULL;
   }
 
-  buffer->width = width;
-  buffer->height = height;
-  buffer->pitch = width * sizeof(uint32_t);
+  buffer->game_buffer.width = width;
+  buffer->game_buffer.height = height;
+  buffer->game_buffer.pitch = width * sizeof(uint32_t);
 
-  buffer->pixels =
-      malloc((size_t)buffer->width * (size_t)buffer->height * sizeof(uint32_t));
+  buffer->game_buffer.pixels =
+      malloc((size_t)buffer->game_buffer.width *
+             (size_t)buffer->game_buffer.height * sizeof(uint32_t));
 
-  if (!buffer->pixels) {
+  if (!buffer->game_buffer.pixels) {
     fprintf(stderr, "Could not allocate framebuffer\n");
     return 0;
   }
 
-  buffer->image = XCreateImage(display, DefaultVisual(display, screen),
-                               DefaultDepth(display, screen), ZPixmap, 0,
-                               (char *)buffer->pixels, buffer->width,
-                               buffer->height, 32, buffer->pitch);
+  buffer->image = XCreateImage(
+      display, DefaultVisual(display, screen), DefaultDepth(display, screen),
+      ZPixmap, 0, (char *)buffer->game_buffer.pixels, buffer->game_buffer.width,
+      buffer->game_buffer.height, 32, buffer->game_buffer.pitch);
 
   if (!buffer->image) {
     fprintf(stderr, "Could not create XImage\n");
-    free(buffer->pixels);
-    buffer->pixels = NULL;
+    free(buffer->game_buffer.pixels);
+    buffer->game_buffer.pixels = NULL;
     return 0;
   }
   return 1;
@@ -104,7 +113,7 @@ int main(void) {
 
   XMapWindow(display, window);
 
-  Framebuffer buffer = {0};
+  LinuxFramebuffer buffer = {0};
 
   if (!resize_framebuffer(display, screen, &buffer, width, height)) {
     XDestroyWindow(display, window);
@@ -117,7 +126,7 @@ int main(void) {
   uint8_t x_offset = 0;
   uint8_t y_offset = 0;
 
-  render(&buffer, y_offset, x_offset);
+  render(&buffer.game_buffer, y_offset, x_offset);
 
   struct timespec clock_res;
   clock_getres(CLOCK_MONOTONIC, &clock_res);
@@ -189,15 +198,16 @@ int main(void) {
         int new_width = event.xconfigure.width;
         int new_height = event.xconfigure.height;
 
-        if (new_width != buffer.width || new_height != buffer.height) {
+        if (new_width != buffer.game_buffer.width ||
+            new_height != buffer.game_buffer.height) {
           resize_framebuffer(display, screen, &buffer, new_width, new_height);
         }
       }
     }
-    render(&buffer, y_offset, x_offset);
+    render(&buffer.game_buffer, y_offset, x_offset);
 
     XPutImage(display, window, DefaultGC(display, screen), buffer.image, 0, 0,
-              0, 0, buffer.width, buffer.height);
+              0, 0, buffer.game_buffer.width, buffer.game_buffer.height);
 
     // y_offset++;
     x_offset++;
