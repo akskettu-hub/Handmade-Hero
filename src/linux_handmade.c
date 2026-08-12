@@ -1,4 +1,3 @@
-#include "platform_audio.h"
 
 #include <X11/X.h>
 #include <X11/XKBlib.h>
@@ -8,41 +7,15 @@
 
 #include <bits/time.h>
 #include <stddef.h>
-#include <stdint.h>
+// #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
-typedef struct {
-  int height;
-  int width;
-  int pitch;
+#include "platform_audio.h"
 
-  uint32_t *pixels;
-  XImage *image;
-} Framebuffer;
-
-typedef struct {
-  int up;
-  int down;
-  int left;
-  int right;
-} GameInput;
-
-static void render(Framebuffer *buffer, uint8_t y_offset, uint8_t x_offset) {
-  for (int y = 0; y < buffer->height; y++) {
-    for (int x = 0; x < buffer->width; x++) {
-      uint8_t red = (uint8_t)(x * 255 / buffer->width + x_offset);
-      uint8_t green = (uint8_t)(y * 255 / buffer->height + y_offset);
-      uint8_t blue = 128;
-
-      uint32_t pixel =
-          ((uint32_t)red << 16) | ((uint32_t)green << 8) | (uint32_t)blue;
-
-      buffer->pixels[y * buffer->width + x] = pixel;
-    }
-  }
-}
+#include "handmade.c"
+#include "handmade.h"
 
 static int resize_framebuffer(Display *display, int screen, Framebuffer *buffer,
                               int width, int height) {
@@ -77,9 +50,6 @@ static int resize_framebuffer(Display *display, int screen, Framebuffer *buffer,
   }
   return 1;
 }
-
-#define AUDIO_GENERATE_BUFFER_FRAMES 4096
-#define AUDIO_OUTPUT_BUFFER_FRAMES 4096
 
 int main(void) {
   Display *display = XOpenDisplay(NULL); // Establish connection to X server
@@ -149,7 +119,6 @@ int main(void) {
 
   render(&buffer, y_offset, x_offset);
 
-  int running = 1;
   struct timespec clock_res;
   clock_getres(CLOCK_MONOTONIC, &clock_res);
   printf("Clock res: %ld s, %ld ns\n", clock_res.tv_sec, clock_res.tv_nsec);
@@ -158,6 +127,7 @@ int main(void) {
   struct timespec prev_counter;
   clock_gettime(CLOCK_MONOTONIC, &prev_counter);
 
+  int running = 1;
   while (running) {
     while (XPending(display)) {
       XEvent event;

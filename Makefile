@@ -7,7 +7,7 @@ TARGET = build/handmade
 AUDIO_TEST = build/audio_test
 
 SOURCES = \
-	src/main.c \
+	src/linux_handmade.c \
 	src/platform_audio.c
 
 all: $(TARGET) $(AUDIO_TEST)

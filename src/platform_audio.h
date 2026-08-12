@@ -4,6 +4,9 @@
 // #include <cstdint>
 #include <stdint.h>
 
+#define AUDIO_GENERATE_BUFFER_FRAMES 4096
+#define AUDIO_OUTPUT_BUFFER_FRAMES 4096
+
 typedef struct AudioState AudioState;
 
 AudioState *audio_init(void);

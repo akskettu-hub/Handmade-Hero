@@ -27,7 +27,6 @@ struct AudioState { // represents audio device and its current state
   double phase;
   double frequency;
 
-  // int16_t *buffer;
   AudioRingBuffer ring;
 
   snd_pcm_uframes_t buffer_size;
@@ -148,9 +147,6 @@ int audio_ring_read(AudioRingBuffer *ring, int16_t *destination, int frames) {
   return frames_read;
 }
 
-#define TARGET 4800
-#define AUDIO_TEMP_BUFFER_FRAMES 4800
-#define TEST_FRAMES 1024
 #define AUDIO_GENERATE_BUFFER_FRAMES 4096
 #define AUDIO_OUTPUT_BUFFER_FRAMES 4096
 
