@@ -150,6 +150,13 @@ int main(void) {
   render(&buffer, y_offset, x_offset);
 
   int running = 1;
+  struct timespec clock_res;
+  clock_getres(CLOCK_MONOTONIC, &clock_res);
+  printf("Clock res: %ld s, %ld ns\n", clock_res.tv_sec, clock_res.tv_nsec);
+
+  struct timespec counter;
+  struct timespec prev_counter;
+  clock_gettime(CLOCK_MONOTONIC, &prev_counter);
 
   while (running) {
     while (XPending(display)) {
@@ -227,18 +234,27 @@ int main(void) {
 
     // audio
 
-    struct timespec tic;
-    struct timespec toc;
+    // struct timespec tic;
+    // struct timespec toc;
 
-    clock_gettime(CLOCK_MONOTONIC, &tic);
+    // clock_gettime(CLOCK_MONOTONIC, &tic);
     audio_update(audio, temp_buffer, temp_output_buffer);
-    clock_gettime(CLOCK_MONOTONIC, &toc);
+    // clock_gettime(CLOCK_MONOTONIC, &toc);
 
-    long long elapsed =
-        (toc.tv_sec - tic.tv_sec) * 1000000000LL + (toc.tv_nsec - tic.tv_nsec);
+    // long long elapsed = (toc.tv_sec - tic.tv_sec) * 1000000000LL +
+    // (toc.tv_nsec - tic.tv_nsec);
 
     // printf("Audio time: %lld ns\n", elapsed);
     //  end of audio
+
+    clock_gettime(CLOCK_MONOTONIC, &counter);
+    long long elapsed = (counter.tv_sec - prev_counter.tv_sec) * 1000000000LL +
+                        (counter.tv_nsec - prev_counter.tv_nsec);
+    prev_counter = counter;
+
+    long long fps = 1000000000LL / elapsed;
+
+    printf("Elapsed: %lld ns, %lld FPS\n", elapsed, fps);
   }
   audio_shutdown(audio);
 

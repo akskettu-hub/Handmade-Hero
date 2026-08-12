@@ -14,6 +14,8 @@ typedef struct {
   int read_position;  // Where ALSA will get its next frame
   int write_position; // where the game will put its next frame
   int count;          // number of frames currently in the buffer
+
+  int target; // N frames to keep in buffer
 } AudioRingBuffer;
 
 struct AudioState { // represents audio device and its current state
@@ -68,6 +70,7 @@ AudioState *audio_init(void) {
   audio->ring.read_position = 0;
   audio->ring.write_position = 0;
   audio->ring.count = 0;
+  audio->ring.target = audio->sample_rate / 10;
 
   result = snd_pcm_set_params(audio->pcm, SND_PCM_FORMAT_S16_LE,
                               SND_PCM_ACCESS_RW_INTERLEAVED, audio->channels,
@@ -153,14 +156,16 @@ int audio_ring_read(AudioRingBuffer *ring, int16_t *destination, int frames) {
 
 void audio_update(AudioState *audio, int16_t *temp_buffer,
                   int16_t *temp_output_buffer) {
+  // TODO: Change this to generate audio based on min(target, ring free space)
   snd_pcm_sframes_t available = snd_pcm_avail_update(audio->pcm);
 
   long queued = audio->buffer_size - available;
 
-  int target = audio->sample_rate / 10;
+  int target = audio->ring.target;
 
   if (audio->ring.count < target) {
-    int frames_to_generate = target - audio->ring.count;
+    int frames_to_generate =
+        target - audio->ring.count; // remaining to get to target
 
     if (frames_to_generate > AUDIO_GENERATE_BUFFER_FRAMES) {
 
@@ -172,12 +177,9 @@ void audio_update(AudioState *audio, int16_t *temp_buffer,
         audio_ring_write(&audio->ring, temp_buffer, frames_to_generate);
 
     if (frames_written != frames_to_generate) {
-      fprintf(stderr, "Ring buffer could not accept all generated audio"
-
-      );
+      fprintf(stderr, "Ring buffer could not accept all generated audio");
     }
   }
-
   int written_pcm = audio_output(audio, temp_output_buffer);
 }
 
