@@ -7,7 +7,7 @@
 
 #include <bits/time.h>
 #include <stddef.h>
-// #include <stdint.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -60,6 +60,8 @@ static int linux_resize_gamebuffer(Display *display, int screen,
   }
   return 1;
 }
+// Smooth gradient test
+//
 
 int main(void) {
   Display *display = XOpenDisplay(NULL); // Establish connection to X server
@@ -83,15 +85,16 @@ int main(void) {
     return 1;
   }
 
-  GameAudioState gameAudioState = {0};
-  gameAudioState.sample_rate = audio->sample_rate;
-  gameAudioState.channels = audio->channels;
-  gameAudioState.phase = audio->phase;
-  gameAudioState.frequency = audio->frequency;
-  gameAudioState.toneVolume = audio->toneVolume;
-
   int16_t temp_buffer[AUDIO_GENERATE_BUFFER_FRAMES * 2];
   int16_t temp_output_buffer[AUDIO_OUTPUT_BUFFER_FRAMES * 2];
+
+  GameAudioState gameAudioState = {0};
+  gameAudioState.buffer = temp_buffer;
+  gameAudioState.sample_rate = AUDIO_SAMPLE_RATE;
+  gameAudioState.channels = AUDIO_CHANNELS;
+  gameAudioState.phase = 0.0;
+  gameAudioState.frequency = 440.0;
+  gameAudioState.toneVolume = 3000;
 
   // int16_t audio_buffer[AUDIO_FRAMES * 2];
   //  printf("size of audio buffer: %ld\n", sizeof(audio_buffer));
@@ -234,7 +237,7 @@ int main(void) {
     // clock_gettime(CLOCK_MONOTONIC, &tic);
     int framesToGenerate = linuxAudioRequestedFrames(audio);
 
-    gameAudioGenerate(&gameAudioState, temp_buffer, framesToGenerate);
+    gameAudioGenerate(&gameAudioState, framesToGenerate);
     audio_update(audio, temp_buffer, temp_output_buffer, framesToGenerate);
     // clock_gettime(CLOCK_MONOTONIC, &toc);
 

@@ -1,14 +1,35 @@
 #include "platform_audio.h"
 
 #include <alsa/asoundlib.h>
-// #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
 #define AUDIO_RING_FRAMES 48000
-// #define ONE_SEC_AUDIO 48000
+
+typedef struct {
+  int16_t *buffer; // NOTE: The buffer pointed to by this needs to be allocated!
+
+  int capacity;       // Number of frames the buffer can hold
+  int read_position;  // Where ALSA will get its next frame
+  int write_position; // where the game will put its next frame
+  int count;          // number of frames currently in the buffer
+
+  int target; // N frames to keep in ring buffer
+} AudioRingBuffer;
+
+struct AudioState { // represents platform audio device and its state
+  snd_pcm_t *pcm;
+
+  int sample_rate;
+  int channels;
+
+  AudioRingBuffer ring;
+
+  snd_pcm_uframes_t buffer_size;
+  snd_pcm_uframes_t period_size;
+};
 
 AudioState *audio_init(void) {
   AudioState *audio = malloc(sizeof(AudioState));
@@ -26,11 +47,8 @@ AudioState *audio_init(void) {
     return NULL;
   }
 
-  audio->sample_rate = 48000;
-  audio->channels = 2;
-  audio->phase = 0.0;
-  audio->frequency = 440.0;
-  audio->toneVolume = 3000;
+  audio->sample_rate = AUDIO_SAMPLE_RATE;
+  audio->channels = AUDIO_CHANNELS;
 
   int16_t *audio_ring_memory =
       malloc(AUDIO_RING_FRAMES * audio->channels * sizeof(int16_t));
@@ -122,12 +140,9 @@ int audio_ring_read(AudioRingBuffer *ring, int16_t *destination, int frames) {
   return frames_read;
 }
 
-// #define AUDIO_GENERATE_BUFFER_FRAMES 4096
-// #define AUDIO_OUTPUT_BUFFER_FRAMES 4096
-
 int linuxAudioRequestedFrames(AudioState *audio) {
-  snd_pcm_sframes_t available = snd_pcm_avail_update(audio->pcm);
-  long queued = audio->buffer_size - available;
+  // snd_pcm_sframes_t available = snd_pcm_avail_update(audio->pcm);
+  //  long queued = audio->buffer_size - available;
 
   int target = audio->ring.target;
 
@@ -141,44 +156,9 @@ int linuxAudioRequestedFrames(AudioState *audio) {
     }
 
     return frames_to_generate;
-  };
+  }
   return 0;
-};
-
-void audio_update(AudioState *audio, int16_t *temp_buffer,
-                  int16_t *temp_output_buffer, int frames_to_generate) {
-  // int frames_to_generate = linuxAudioRequestedFrames(audio);
-  if (frames_to_generate) {
-    // audio_generate(audio, temp_buffer, frames_to_generate);
-
-    int frames_written =
-        audio_ring_write(&audio->ring, temp_buffer, frames_to_generate);
-
-    if (frames_written != frames_to_generate) {
-      fprintf(stderr, "Ring buffer could not accept all generated audio");
-    }
-  }
-  int written_pcm = audio_output(audio, temp_output_buffer);
 }
-
-/*
-void audio_generate(AudioState *audio, int16_t *buffer, int frames) {
-  for (int frame = 0; frame < frames; frame++) {
-    double value = sin(audio->phase * 2.0 * M_PI);
-
-    int16_t sample = (int16_t)(value * audio->toneVolume);
-
-    buffer[frame * 2 + 0] = sample;
-    buffer[frame * 2 + 1] = sample;
-
-    audio->phase += audio->frequency / audio->sample_rate;
-
-    if (audio->phase >= 1.0) {
-      audio->phase -= 1.0;
-    }
-  }
-}
-  */
 
 int audio_output(AudioState *audio, int16_t *output_buffer) {
   snd_pcm_sframes_t available = snd_pcm_avail_update(audio->pcm);
@@ -228,4 +208,20 @@ int audio_output(AudioState *audio, int16_t *output_buffer) {
   }
 
   return 1;
+}
+
+void audio_update(AudioState *audio, int16_t *temp_buffer,
+                  int16_t *temp_output_buffer, int frames_to_generate) {
+  // int frames_to_generate = linuxAudioRequestedFrames(audio);
+  if (frames_to_generate) {
+    // audio_generate(audio, temp_buffer, frames_to_generate);
+
+    int frames_written =
+        audio_ring_write(&audio->ring, temp_buffer, frames_to_generate);
+
+    if (frames_written != frames_to_generate) {
+      fprintf(stderr, "Ring buffer could not accept all generated audio");
+    }
+  }
+  audio_output(audio, temp_output_buffer);
 }

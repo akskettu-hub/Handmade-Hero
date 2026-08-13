@@ -18,6 +18,8 @@ typedef struct GameRenderBuffer {
 void render(GameRenderBuffer *buffer, uint8_t y_offset, uint8_t x_offset);
 
 typedef struct {
+  int16_t *buffer;
+
   int sample_rate;
   int channels;
 
@@ -26,7 +28,7 @@ typedef struct {
   int16_t toneVolume;
 } GameAudioState;
 
-void gameAudioGenerate(GameAudioState *audio, int16_t *buffer, int frames);
+void gameAudioGenerate(GameAudioState *audio, int frames);
 
 // NOTE: Services that the platform layer provides to the game.
 

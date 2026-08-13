@@ -1,5 +1,6 @@
 #include "handmade.h"
-#include <math.h>
+#include <math.h> // TODO: self implement Pi and sin
+#include <stdint.h>
 
 void render(GameRenderBuffer *buffer, uint8_t y_offset, uint8_t x_offset) {
   for (int y = 0; y < buffer->height; y++) {
@@ -16,14 +17,15 @@ void render(GameRenderBuffer *buffer, uint8_t y_offset, uint8_t x_offset) {
   }
 }
 
-void gameAudioGenerate(GameAudioState *audio, int16_t *buffer, int frames) {
+void gameAudioGenerate(GameAudioState *audio, int frames) {
+  int16_t *pFrame = audio->buffer;
   for (int frame = 0; frame < frames; frame++) {
     double value = sin(audio->phase * 2.0 * M_PI);
 
     int16_t sample = (int16_t)(value * audio->toneVolume);
 
-    buffer[frame * 2 + 0] = sample;
-    buffer[frame * 2 + 1] = sample;
+    *pFrame++ = sample;
+    *pFrame++ = sample;
 
     audio->phase += audio->frequency / audio->sample_rate;
 
