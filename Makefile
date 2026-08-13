@@ -1,6 +1,6 @@
 CC = gcc
 
-CFLAGS = -std=gnu11 -Wall -Wextra -Wpedantic -g
+CFLAGS = -std=gnu11  -Wall -Wextra -Wpedantic -g
 LDFLAGS = -lX11
 
 TARGET = build/handmade

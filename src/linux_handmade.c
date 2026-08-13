@@ -25,8 +25,9 @@ typedef struct {
   XImage *image;
 } LinuxFramebuffer;
 
-static int resize_framebuffer(Display *display, int screen,
-                              LinuxFramebuffer *buffer, int width, int height) {
+static int linux_resize_gamebuffer(Display *display, int screen,
+                                   LinuxFramebuffer *buffer, int width,
+                                   int height) {
   if (buffer->image) {
     XDestroyImage(buffer->image);
     buffer->image = NULL;
@@ -82,6 +83,13 @@ int main(void) {
     return 1;
   }
 
+  GameAudioState gameAudioState = {0};
+  gameAudioState.sample_rate = audio->sample_rate;
+  gameAudioState.channels = audio->channels;
+  gameAudioState.phase = audio->phase;
+  gameAudioState.frequency = audio->frequency;
+  gameAudioState.toneVolume = audio->toneVolume;
+
   int16_t temp_buffer[AUDIO_GENERATE_BUFFER_FRAMES * 2];
   int16_t temp_output_buffer[AUDIO_OUTPUT_BUFFER_FRAMES * 2];
 
@@ -115,7 +123,7 @@ int main(void) {
 
   LinuxFramebuffer buffer = {0};
 
-  if (!resize_framebuffer(display, screen, &buffer, width, height)) {
+  if (!linux_resize_gamebuffer(display, screen, &buffer, width, height)) {
     XDestroyWindow(display, window);
     XCloseDisplay(display);
     return 1;
@@ -200,7 +208,8 @@ int main(void) {
 
         if (new_width != buffer.game_buffer.width ||
             new_height != buffer.game_buffer.height) {
-          resize_framebuffer(display, screen, &buffer, new_width, new_height);
+          linux_resize_gamebuffer(display, screen, &buffer, new_width,
+                                  new_height);
         }
       }
     }
@@ -213,12 +222,20 @@ int main(void) {
     x_offset++;
 
     // audio
+    // NOTE: Refactor audio so that generation happens on geme layer
+    // - platform layer figures out how many frames are needed
+    // - Asks game to generate that amount (ideally to the ring buffer)
+    // - Platform writes generated into ring
+    // - Platform reads from ring int pcm buffer
 
     // struct timespec tic;
     // struct timespec toc;
 
     // clock_gettime(CLOCK_MONOTONIC, &tic);
-    audio_update(audio, temp_buffer, temp_output_buffer);
+    int framesToGenerate = linuxAudioRequestedFrames(audio);
+
+    gameAudioGenerate(&gameAudioState, temp_buffer, framesToGenerate);
+    audio_update(audio, temp_buffer, temp_output_buffer, framesToGenerate);
     // clock_gettime(CLOCK_MONOTONIC, &toc);
 
     // long long elapsed = (toc.tv_sec - tic.tv_sec) * 1000000000LL +
