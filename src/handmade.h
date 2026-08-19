@@ -42,8 +42,13 @@ typedef struct {
   int down;
   int left;
   int right;
+
+  int pitchUp;
+  int pitchDown;
 } GameInput;
 
 void gameControlGradientOffset(GameInput *input, GameGradientOffsets *offsets);
+
+void gameControlSineFrequency(GameInput *input, GameAudioState *audio);
 
 #endif

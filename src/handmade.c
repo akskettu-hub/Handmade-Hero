@@ -52,3 +52,21 @@ void gameControlGradientOffset(GameInput *input, GameGradientOffsets *offsets) {
     offsets->yOffset -= input->down;
   }
 }
+
+void gameControlSineFrequency(GameInput *input, GameAudioState *audio) {
+  if (input->pitchUp) {
+    audio->frequency += input->pitchUp;
+
+    if (audio->frequency > 880.0) {
+      audio->frequency = 880.0;
+    }
+  }
+
+  if (input->pitchDown) {
+    audio->frequency -= input->pitchDown;
+
+    if (audio->frequency < 220.0) {
+      audio->frequency = 220.0;
+    }
+  }
+}

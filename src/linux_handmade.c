@@ -130,7 +130,7 @@ int main(void) {
     return 1;
   }
 
-  GameInput game_input;
+  GameInput gameInput;
 
   GameGradientOffsets gradientOffsets = {0};
 
@@ -158,23 +158,33 @@ int main(void) {
         }
 
         if (key == XK_w) {
-          game_input.up = 1;
-          printf("game_input.up = %d\n", game_input.up);
+          gameInput.up = 1;
+          printf("gameInput.up = %d\n", gameInput.up);
         }
 
         if (key == XK_s) {
-          game_input.down = 1;
-          printf("game_input.down = %d\n", game_input.down);
+          gameInput.down = 1;
+          printf("gameInput.down = %d\n", gameInput.down);
         }
 
         if (key == XK_a) {
-          game_input.left = 1;
-          printf("game_input.left = %d\n", game_input.left);
+          gameInput.left = 1;
+          printf("gameInput.left = %d\n", gameInput.left);
         }
 
         if (key == XK_d) {
-          game_input.right = 1;
-          printf("game_input.right = %d\n", game_input.right);
+          gameInput.right = 1;
+          printf("gameInput.right = %d\n", gameInput.right);
+        }
+
+        if (key == XK_t) {
+          gameInput.pitchUp = 1;
+          printf("gameInput.pitchUp = %d\n", gameInput.pitchUp);
+        }
+
+        if (key == XK_g) {
+          gameInput.pitchDown = 1;
+          printf("gameInput.pitchDown = %d\n", gameInput.right);
         }
       }
 
@@ -182,23 +192,33 @@ int main(void) {
         KeySym key = XLookupKeysym(&event.xkey, 0);
 
         if (key == XK_w) {
-          game_input.up = 0;
-          printf("game_input.up = %d\n", game_input.up);
+          gameInput.up = 0;
+          printf("gameInput.up = %d\n", gameInput.up);
         }
 
         if (key == XK_s) {
-          game_input.down = 0;
-          printf("game_input.down = %d\n", game_input.down);
+          gameInput.down = 0;
+          printf("gameInput.down = %d\n", gameInput.down);
         }
 
         if (key == XK_a) {
-          game_input.left = 0;
-          printf("game_input.left = %d\n", game_input.left);
+          gameInput.left = 0;
+          printf("gameInput.left = %d\n", gameInput.left);
         }
 
         if (key == XK_d) {
-          game_input.right = 0;
-          printf("game_input.right = %d\n", game_input.right);
+          gameInput.right = 0;
+          printf("gameInput.right = %d\n", gameInput.right);
+        }
+
+        if (key == XK_t) {
+          gameInput.pitchUp = 0;
+          printf("gameInput.pitchUp = %d\n", gameInput.pitchUp);
+        }
+
+        if (key == XK_g) {
+          gameInput.pitchDown = 0;
+          printf("gameInput.pitchDown = %d\n", gameInput.right);
         }
       }
 
@@ -213,7 +233,7 @@ int main(void) {
         }
       }
     }
-    gameControlGradientOffset(&game_input, &gradientOffsets);
+    gameControlGradientOffset(&gameInput, &gradientOffsets);
 
     render(&buffer.game_buffer, &gradientOffsets);
 
@@ -234,6 +254,7 @@ int main(void) {
     // struct timespec toc;
 
     // clock_gettime(CLOCK_MONOTONIC, &tic);
+    gameControlSineFrequency(&gameInput, &gameAudioState);
     int framesToGenerate = linuxAudioRequestedFrames(audio);
 
     gameAudioGenerate(&gameAudioState, framesToGenerate);
