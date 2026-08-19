@@ -60,8 +60,6 @@ static int linux_resize_gamebuffer(Display *display, int screen,
   }
   return 1;
 }
-// Smooth gradient test
-//
 
 int main(void) {
   Display *display = XOpenDisplay(NULL); // Establish connection to X server
@@ -134,10 +132,9 @@ int main(void) {
 
   GameInput game_input;
 
-  uint8_t x_offset = 0;
-  uint8_t y_offset = 0;
+  GameGradientOffsets gradientOffsets = {0};
 
-  render(&buffer.game_buffer, y_offset, x_offset);
+  render(&buffer.game_buffer, &gradientOffsets);
 
   struct timespec clock_res;
   clock_getres(CLOCK_MONOTONIC, &clock_res);
@@ -216,13 +213,15 @@ int main(void) {
         }
       }
     }
-    render(&buffer.game_buffer, y_offset, x_offset);
+    gameControlGradientOffset(&game_input, &gradientOffsets);
+
+    render(&buffer.game_buffer, &gradientOffsets);
 
     XPutImage(display, window, DefaultGC(display, screen), buffer.image, 0, 0,
               0, 0, buffer.game_buffer.width, buffer.game_buffer.height);
 
     // y_offset++;
-    x_offset++;
+    // x_offset++;
 
     // audio
     // NOTE: Refactor audio so that generation happens on geme layer

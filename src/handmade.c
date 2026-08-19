@@ -2,11 +2,11 @@
 #include <math.h> // TODO: self implement Pi and sin
 #include <stdint.h>
 
-void render(GameRenderBuffer *buffer, uint8_t y_offset, uint8_t x_offset) {
+void render(GameRenderBuffer *buffer, GameGradientOffsets *offsets) {
   for (int y = 0; y < buffer->height; y++) {
     for (int x = 0; x < buffer->width; x++) {
-      uint8_t red = (uint8_t)(x * 255 / buffer->width + x_offset);
-      uint8_t green = (uint8_t)(y * 255 / buffer->height + y_offset);
+      uint8_t red = (uint8_t)(x * 255 / buffer->width + offsets->xOffset);
+      uint8_t green = (uint8_t)(y * 255 / buffer->height + offsets->yOffset);
       uint8_t blue = 128;
 
       uint32_t pixel =
@@ -32,5 +32,23 @@ void gameAudioGenerate(GameAudioState *audio, int frames) {
     if (audio->phase >= 1.0) {
       audio->phase -= 1.0;
     }
+  }
+}
+
+void gameControlGradientOffset(GameInput *input, GameGradientOffsets *offsets) {
+  if (input->left) {
+    offsets->xOffset += input->left;
+  }
+
+  if (input->right) {
+    offsets->xOffset -= input->right;
+  }
+
+  if (input->up) {
+    offsets->yOffset += input->up;
+  }
+
+  if (input->down) {
+    offsets->yOffset -= input->down;
   }
 }
