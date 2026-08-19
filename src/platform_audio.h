@@ -10,15 +10,12 @@
 #define AUDIO_SAMPLE_RATE 48000
 #define AUDIO_CHANNELS 2
 
-// NOTE: These typedefs were moved here temporarily to give game audio info
-// about sound setup
-
 typedef struct AudioState AudioState;
 
-AudioState *audio_init(void);
-void audio_shutdown(AudioState *audio);
+AudioState *audioInit(void);
+void audioShutdown(AudioState *audio);
 int linuxAudioRequestedFrames(AudioState *audio);
-void audio_update(AudioState *audio, int16_t *temp_buffer,
-                  int16_t *temp_output_buffer, int frames_to_generate);
+void audioUpdate(AudioState *audio, int16_t *tempBuffer,
+                 int16_t *tempOutputBuffer, int framesToGenerate);
 
 #endif

@@ -25,7 +25,7 @@ void render(GameRenderBuffer *buffer, GameGradientOffsets *offsets);
 typedef struct {
   int16_t *buffer;
 
-  int sample_rate;
+  int sampleRate;
   int channels;
 
   double phase;

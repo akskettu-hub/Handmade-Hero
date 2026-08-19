@@ -11,10 +11,10 @@
 typedef struct {
   int16_t *buffer; // NOTE: The buffer pointed to by this needs to be allocated!
 
-  int capacity;       // Number of frames the buffer can hold
-  int read_position;  // Where ALSA will get its next frame
-  int write_position; // where the game will put its next frame
-  int count;          // number of frames currently in the buffer
+  int capacity;      // Number of frames the buffer can hold
+  int readPosition;  // Where ALSA will get its next frame
+  int writePosition; // where the game will put its next frame
+  int count;         // number of frames currently in the buffer
 
   int target; // N frames to keep in ring buffer
 } AudioRingBuffer;
@@ -22,16 +22,16 @@ typedef struct {
 struct AudioState { // represents platform audio device and its state
   snd_pcm_t *pcm;
 
-  int sample_rate;
+  int sampleRate;
   int channels;
 
   AudioRingBuffer ring;
 
-  snd_pcm_uframes_t buffer_size;
-  snd_pcm_uframes_t period_size;
+  snd_pcm_uframes_t bufferSize;
+  snd_pcm_uframes_t periodSize;
 };
 
-AudioState *audio_init(void) {
+AudioState *audioInit(void) {
   AudioState *audio = malloc(sizeof(AudioState));
 
   if (!audio) {
@@ -47,26 +47,26 @@ AudioState *audio_init(void) {
     return NULL;
   }
 
-  audio->sample_rate = AUDIO_SAMPLE_RATE;
+  audio->sampleRate = AUDIO_SAMPLE_RATE;
   audio->channels = AUDIO_CHANNELS;
 
-  int16_t *audio_ring_memory =
+  int16_t *audioRingMemory =
       malloc(AUDIO_RING_FRAMES * audio->channels * sizeof(int16_t));
 
-  if (!audio_ring_memory) {
+  if (!audioRingMemory) {
     fprintf(stderr, "Could not allocate ring memory\n");
   }
 
-  audio->ring.buffer = audio_ring_memory;
+  audio->ring.buffer = audioRingMemory;
   audio->ring.capacity = AUDIO_RING_FRAMES;
-  audio->ring.read_position = 0;
-  audio->ring.write_position = 0;
+  audio->ring.readPosition = 0;
+  audio->ring.writePosition = 0;
   audio->ring.count = 0;
-  audio->ring.target = audio->sample_rate / 10;
+  audio->ring.target = audio->sampleRate / 10;
 
   result = snd_pcm_set_params(audio->pcm, SND_PCM_FORMAT_S16_LE,
                               SND_PCM_ACCESS_RW_INTERLEAVED, audio->channels,
-                              audio->sample_rate, 1, 500000);
+                              audio->sampleRate, 1, 500000);
 
   if (result < 0) {
     fprintf(stderr, "Could not configure audio device: %s\n",
@@ -79,7 +79,7 @@ AudioState *audio_init(void) {
   }
 
   result =
-      snd_pcm_get_params(audio->pcm, &audio->buffer_size, &audio->period_size);
+      snd_pcm_get_params(audio->pcm, &audio->bufferSize, &audio->periodSize);
 
   if (result < 0) {
     fprintf(stderr, "Could not get pmc buffer or period size: %s\n",
@@ -89,7 +89,7 @@ AudioState *audio_init(void) {
   return audio;
 }
 
-void audio_shutdown(AudioState *audio) {
+void audioShutdown(AudioState *audio) {
   if (audio->pcm) {
     snd_pcm_drain(audio->pcm);
     snd_pcm_close(audio->pcm);
@@ -99,45 +99,45 @@ void audio_shutdown(AudioState *audio) {
   }
 }
 
-int audio_ring_write(AudioRingBuffer *ring, int16_t *source, int frames) {
-  int frames_written = 0;
+int audioRingWrite(AudioRingBuffer *ring, int16_t *source, int frames) {
+  int framesWritten = 0;
 
-  while (frames_written < frames && ring->count < ring->capacity) {
-    int write = ring->write_position;
+  while (framesWritten < frames && ring->count < ring->capacity) {
+    int write = ring->writePosition;
 
-    ring->buffer[write * 2 + 0] = source[frames_written * 2 + 0];
-    ring->buffer[write * 2 + 1] = source[frames_written * 2 + 1];
+    ring->buffer[write * 2 + 0] = source[framesWritten * 2 + 0];
+    ring->buffer[write * 2 + 1] = source[framesWritten * 2 + 1];
 
-    ring->write_position++;
+    ring->writePosition++;
 
-    if (ring->write_position >= ring->capacity) {
-      ring->write_position = 0;
+    if (ring->writePosition >= ring->capacity) {
+      ring->writePosition = 0;
     }
     ring->count++;
-    frames_written++;
+    framesWritten++;
   }
-  return frames_written;
+  return framesWritten;
 }
 
-int audio_ring_read(AudioRingBuffer *ring, int16_t *destination, int frames) {
-  int frames_read = 0;
+int audioRingRead(AudioRingBuffer *ring, int16_t *destination, int frames) {
+  int framesRead = 0;
 
-  while (frames_read < frames && ring->count > 0) {
-    int read = ring->read_position;
+  while (framesRead < frames && ring->count > 0) {
+    int read = ring->readPosition;
 
-    destination[frames_read * 2 + 0] = ring->buffer[read * 2 + 0];
-    destination[frames_read * 2 + 1] = ring->buffer[read * 2 + 1];
+    destination[framesRead * 2 + 0] = ring->buffer[read * 2 + 0];
+    destination[framesRead * 2 + 1] = ring->buffer[read * 2 + 1];
 
-    ring->read_position++;
+    ring->readPosition++;
 
-    if (ring->read_position >= ring->capacity) {
-      ring->read_position = 0;
+    if (ring->readPosition >= ring->capacity) {
+      ring->readPosition = 0;
     }
 
     ring->count--;
-    frames_read++;
+    framesRead++;
   }
-  return frames_read;
+  return framesRead;
 }
 
 int linuxAudioRequestedFrames(AudioState *audio) {
@@ -147,46 +147,45 @@ int linuxAudioRequestedFrames(AudioState *audio) {
   int target = audio->ring.target;
 
   if (audio->ring.count < target) {
-    int frames_to_generate =
+    int framesToGenerate =
         target - audio->ring.count; // remaining to get to target
 
-    if (frames_to_generate > AUDIO_GENERATE_BUFFER_FRAMES) {
+    if (framesToGenerate > AUDIO_GENERATE_BUFFER_FRAMES) {
 
-      frames_to_generate = AUDIO_GENERATE_BUFFER_FRAMES;
+      framesToGenerate = AUDIO_GENERATE_BUFFER_FRAMES;
     }
 
-    return frames_to_generate;
+    return framesToGenerate;
   }
   return 0;
 }
 
-int audio_output(AudioState *audio, int16_t *output_buffer) {
+int audioOutput(AudioState *audio, int16_t *output_buffer) {
   snd_pcm_sframes_t available = snd_pcm_avail_update(audio->pcm);
 
   if (available <= 0) {
     return 1;
   }
 
-  int frames_to_output = available;
+  int framesToOutput = available;
 
-  if (frames_to_output > AUDIO_OUTPUT_BUFFER_FRAMES) {
-    frames_to_output = AUDIO_OUTPUT_BUFFER_FRAMES;
+  if (framesToOutput > AUDIO_OUTPUT_BUFFER_FRAMES) {
+    framesToOutput = AUDIO_OUTPUT_BUFFER_FRAMES;
   }
 
-  if (frames_to_output > audio->ring.count) {
-    frames_to_output = audio->ring.count;
+  if (framesToOutput > audio->ring.count) {
+    framesToOutput = audio->ring.count;
   }
 
-  if (frames_to_output == 0) {
+  if (framesToOutput == 0) {
     return 1;
   }
 
-  int frames_read =
-      audio_ring_read(&audio->ring, output_buffer, frames_to_output);
+  int framesRead = audioRingRead(&audio->ring, output_buffer, framesToOutput);
 
-  if (frames_read > 0) {
+  if (framesRead > 0) {
     snd_pcm_sframes_t written =
-        snd_pcm_writei(audio->pcm, output_buffer, frames_read);
+        snd_pcm_writei(audio->pcm, output_buffer, framesRead);
 
     if (written < 0) {
       written = snd_pcm_recover(audio->pcm, written, 0);
@@ -210,18 +209,18 @@ int audio_output(AudioState *audio, int16_t *output_buffer) {
   return 1;
 }
 
-void audio_update(AudioState *audio, int16_t *temp_buffer,
-                  int16_t *temp_output_buffer, int frames_to_generate) {
+void audioUpdate(AudioState *audio, int16_t *tempBuffer,
+                 int16_t *tempOutputBuffer, int framesToGenerate) {
   // int frames_to_generate = linuxAudioRequestedFrames(audio);
-  if (frames_to_generate) {
+  if (framesToGenerate) {
     // audio_generate(audio, temp_buffer, frames_to_generate);
 
-    int frames_written =
-        audio_ring_write(&audio->ring, temp_buffer, frames_to_generate);
+    int framesWritten =
+        audioRingWrite(&audio->ring, tempBuffer, framesToGenerate);
 
-    if (frames_written != frames_to_generate) {
+    if (framesWritten != framesToGenerate) {
       fprintf(stderr, "Ring buffer could not accept all generated audio");
     }
   }
-  audio_output(audio, temp_output_buffer);
+  audioOutput(audio, tempOutputBuffer);
 }

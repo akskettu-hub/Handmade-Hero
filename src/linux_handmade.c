@@ -21,41 +21,41 @@ typedef struct {
 } LinuxImage;
 
 typedef struct {
-  GameRenderBuffer game_buffer;
+  GameRenderBuffer gameBuffer;
   XImage *image;
 } LinuxFramebuffer;
 
-static int linux_resize_gamebuffer(Display *display, int screen,
-                                   LinuxFramebuffer *buffer, int width,
-                                   int height) {
+static int linuxResizeGamebuffer(Display *display, int screen,
+                                 LinuxFramebuffer *buffer, int width,
+                                 int height) {
   if (buffer->image) {
     XDestroyImage(buffer->image);
     buffer->image = NULL;
-    buffer->game_buffer.pixels = NULL;
+    buffer->gameBuffer.pixels = NULL;
   }
 
-  buffer->game_buffer.width = width;
-  buffer->game_buffer.height = height;
-  buffer->game_buffer.pitch = width * sizeof(uint32_t);
+  buffer->gameBuffer.width = width;
+  buffer->gameBuffer.height = height;
+  buffer->gameBuffer.pitch = width * sizeof(uint32_t);
 
-  buffer->game_buffer.pixels =
-      malloc((size_t)buffer->game_buffer.width *
-             (size_t)buffer->game_buffer.height * sizeof(uint32_t));
+  buffer->gameBuffer.pixels =
+      malloc((size_t)buffer->gameBuffer.width *
+             (size_t)buffer->gameBuffer.height * sizeof(uint32_t));
 
-  if (!buffer->game_buffer.pixels) {
+  if (!buffer->gameBuffer.pixels) {
     fprintf(stderr, "Could not allocate framebuffer\n");
     return 0;
   }
 
   buffer->image = XCreateImage(
       display, DefaultVisual(display, screen), DefaultDepth(display, screen),
-      ZPixmap, 0, (char *)buffer->game_buffer.pixels, buffer->game_buffer.width,
-      buffer->game_buffer.height, 32, buffer->game_buffer.pitch);
+      ZPixmap, 0, (char *)buffer->gameBuffer.pixels, buffer->gameBuffer.width,
+      buffer->gameBuffer.height, 32, buffer->gameBuffer.pitch);
 
   if (!buffer->image) {
     fprintf(stderr, "Could not create XImage\n");
-    free(buffer->game_buffer.pixels);
-    buffer->game_buffer.pixels = NULL;
+    free(buffer->gameBuffer.pixels);
+    buffer->gameBuffer.pixels = NULL;
     return 0;
   }
   return 1;
@@ -69,26 +69,26 @@ int main(void) {
     return 1;
   }
 
-  Bool detectable_auto_repeat;
+  Bool detectableAutoRepeat;
 
-  if (!XkbSetDetectableAutoRepeat(display, True, &detectable_auto_repeat)) {
+  if (!XkbSetDetectableAutoRepeat(display, True, &detectableAutoRepeat)) {
     fprintf(stderr, "Could not detect auto repeat.\n");
   }
 
   // Init audio
-  AudioState *audio = audio_init();
+  AudioState *audio = audioInit();
 
   if (!audio) {
     fprintf(stderr, "Could not initialise audio\n");
     return 1;
   }
 
-  int16_t temp_buffer[AUDIO_GENERATE_BUFFER_FRAMES * 2];
-  int16_t temp_output_buffer[AUDIO_OUTPUT_BUFFER_FRAMES * 2];
+  int16_t tempBuffer[AUDIO_GENERATE_BUFFER_FRAMES * 2];
+  int16_t tempOutputBuffer[AUDIO_OUTPUT_BUFFER_FRAMES * 2];
 
   GameAudioState gameAudioState = {0};
-  gameAudioState.buffer = temp_buffer;
-  gameAudioState.sample_rate = AUDIO_SAMPLE_RATE;
+  gameAudioState.buffer = tempBuffer;
+  gameAudioState.sampleRate = AUDIO_SAMPLE_RATE;
   gameAudioState.channels = AUDIO_CHANNELS;
   gameAudioState.phase = 0.0;
   gameAudioState.frequency = 440.0;
@@ -101,14 +101,11 @@ int main(void) {
 
   int screen = DefaultScreen(display); // Figure out which srcreen is used
 
-  int screen_width = DisplayWidth(display, screen);
-  int screen_height = DisplayHeight(display, screen);
+  int screenWidth = DisplayWidth(display, screen);
+  int screenHeight = DisplayHeight(display, screen);
 
-  int width = screen_width / 2;
-  int height = screen_height / 2;
-
-  // int window_width = 960;
-  // int window_height = 540;
+  int width = screenWidth / 2;
+  int height = screenHeight / 2;
 
   Window window = XCreateSimpleWindow(
       display, RootWindow(display, screen), 100, 100, width, height, 1,
@@ -124,7 +121,7 @@ int main(void) {
 
   LinuxFramebuffer buffer = {0};
 
-  if (!linux_resize_gamebuffer(display, screen, &buffer, width, height)) {
+  if (!linuxResizeGamebuffer(display, screen, &buffer, width, height)) {
     XDestroyWindow(display, window);
     XCloseDisplay(display);
     return 1;
@@ -134,15 +131,15 @@ int main(void) {
 
   GameGradientOffsets gradientOffsets = {0};
 
-  render(&buffer.game_buffer, &gradientOffsets);
+  render(&buffer.gameBuffer, &gradientOffsets);
 
-  struct timespec clock_res;
-  clock_getres(CLOCK_MONOTONIC, &clock_res);
-  printf("Clock res: %ld s, %ld ns\n", clock_res.tv_sec, clock_res.tv_nsec);
+  struct timespec clockRes;
+  clock_getres(CLOCK_MONOTONIC, &clockRes);
+  printf("Clock res: %ld s, %ld ns\n", clockRes.tv_sec, clockRes.tv_nsec);
 
   struct timespec counter;
-  struct timespec prev_counter;
-  clock_gettime(CLOCK_MONOTONIC, &prev_counter);
+  struct timespec prevCounter;
+  clock_gettime(CLOCK_MONOTONIC, &prevCounter);
 
   int running = 1;
   while (running) {
@@ -223,32 +220,23 @@ int main(void) {
       }
 
       if (event.type == ConfigureNotify) {
-        int new_width = event.xconfigure.width;
-        int new_height = event.xconfigure.height;
+        int newWidth = event.xconfigure.width;
+        int newHeight = event.xconfigure.height;
 
-        if (new_width != buffer.game_buffer.width ||
-            new_height != buffer.game_buffer.height) {
-          linux_resize_gamebuffer(display, screen, &buffer, new_width,
-                                  new_height);
+        if (newWidth != buffer.gameBuffer.width ||
+            newHeight != buffer.gameBuffer.height) {
+          linuxResizeGamebuffer(display, screen, &buffer, newWidth, newHeight);
         }
       }
     }
     gameControlGradientOffset(&gameInput, &gradientOffsets);
 
-    render(&buffer.game_buffer, &gradientOffsets);
+    render(&buffer.gameBuffer, &gradientOffsets);
 
     XPutImage(display, window, DefaultGC(display, screen), buffer.image, 0, 0,
-              0, 0, buffer.game_buffer.width, buffer.game_buffer.height);
-
-    // y_offset++;
-    // x_offset++;
+              0, 0, buffer.gameBuffer.width, buffer.gameBuffer.height);
 
     // audio
-    // NOTE: Refactor audio so that generation happens on geme layer
-    // - platform layer figures out how many frames are needed
-    // - Asks game to generate that amount (ideally to the ring buffer)
-    // - Platform writes generated into ring
-    // - Platform reads from ring int pcm buffer
 
     // struct timespec tic;
     // struct timespec toc;
@@ -256,9 +244,9 @@ int main(void) {
     // clock_gettime(CLOCK_MONOTONIC, &tic);
     gameControlSineFrequency(&gameInput, &gameAudioState);
     int framesToGenerate = linuxAudioRequestedFrames(audio);
-
     gameAudioGenerate(&gameAudioState, framesToGenerate);
-    audio_update(audio, temp_buffer, temp_output_buffer, framesToGenerate);
+
+    audioUpdate(audio, tempBuffer, tempOutputBuffer, framesToGenerate);
     // clock_gettime(CLOCK_MONOTONIC, &toc);
 
     // long long elapsed = (toc.tv_sec - tic.tv_sec) * 1000000000LL +
@@ -268,15 +256,15 @@ int main(void) {
     //  end of audio
 
     clock_gettime(CLOCK_MONOTONIC, &counter);
-    long long elapsed = (counter.tv_sec - prev_counter.tv_sec) * 1000000000LL +
-                        (counter.tv_nsec - prev_counter.tv_nsec);
-    prev_counter = counter;
+    long long elapsed = (counter.tv_sec - prevCounter.tv_sec) * 1000000000LL +
+                        (counter.tv_nsec - prevCounter.tv_nsec);
+    prevCounter = counter;
 
     long long fps = 1000000000LL / elapsed;
 
     printf("Elapsed: %lld ns, %lld FPS\n", elapsed, fps);
   }
-  audio_shutdown(audio);
+  audioShutdown(audio);
 
   XDestroyImage(buffer.image);
 

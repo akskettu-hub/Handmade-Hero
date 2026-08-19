@@ -27,7 +27,7 @@ void gameAudioGenerate(GameAudioState *audio, int frames) {
     *pFrame++ = sample;
     *pFrame++ = sample;
 
-    audio->phase += audio->frequency / audio->sample_rate;
+    audio->phase += audio->frequency / audio->sampleRate;
 
     if (audio->phase >= 1.0) {
       audio->phase -= 1.0;
