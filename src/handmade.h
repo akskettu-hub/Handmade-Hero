@@ -37,6 +37,19 @@ void gameAudioGenerate(GameAudioState *audio, int frames);
 
 // NOTE: Services that the platform layer provides to the game.
 
+// #if HANDMADE_INTERNAL
+typedef struct {
+  size_t contentsSize;
+  void *contents;
+} DEBUGReadFileResult;
+
+DEBUGReadFileResult DEBUGPlatformReadEntireFile(char *filename);
+void DEBUGPlatformFreeFileMemory(void *memory);
+
+uint8_t DEBUGPlatformWriteEntireFile(char *filename, uint32_t memorySize,
+                                     void *memory);
+// #endif
+
 typedef struct {
   int up;
   int down;

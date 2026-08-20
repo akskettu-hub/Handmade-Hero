@@ -61,6 +61,51 @@ static int linuxResizeGamebuffer(Display *display, int screen,
   return 1;
 }
 
+DEBUGReadFileResult DEBUGPlatformReadEntireFile(char *filename) {
+  DEBUGReadFileResult result = {0};
+
+  FILE *file = fopen(filename, "rb");
+  if (!file) {
+    return result;
+  }
+
+  if (fseek(file, 0, SEEK_END) != 0) {
+    fclose(file);
+    return result;
+  }
+
+  long fileSize = ftell(file);
+  if (fileSize < 0) {
+    fclose(file);
+    return result;
+  }
+
+  rewind(file);
+
+  void *contents = malloc((size_t)fileSize);
+  if (!contents) {
+    fclose(file);
+    return result;
+  }
+
+  size_t bytesRead = fread(contents, 1, (size_t)fileSize, file);
+
+  fclose(file);
+
+  if (bytesRead != (size_t)fileSize) {
+    free(contents);
+    return result;
+  }
+  result.contents = contents;
+  result.contentsSize = bytesRead;
+
+  return result;
+}
+void DEBUGPlatformFreeFileMemory(void *memory) { free(memory); }
+
+// uint8_t DEBUGPlatformWriteEntireFile(char *filename, uint32_t memorySize,
+// void *memory) {}
+
 int main(void) {
   Display *display = XOpenDisplay(NULL); // Establish connection to X server
 
@@ -263,6 +308,15 @@ int main(void) {
     long long fps = 1000000000LL / elapsed;
 
     printf("Elapsed: %lld ns, %lld FPS\n", elapsed, fps);
+  }
+  // NOTE: File I/O test.
+  DEBUGReadFileResult file = DEBUGPlatformReadEntireFile("data/io_test.txt");
+
+  if (file.contents) {
+    printf("test debug file io. Size: %ldB\n", file.contentsSize);
+    DEBUGPlatformFreeFileMemory(file.contents);
+  } else {
+    printf("no file\n");
   }
   audioShutdown(audio);
 
