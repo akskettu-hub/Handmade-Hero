@@ -51,4 +51,16 @@ void gameControlGradientOffset(GameInput *input, GameGradientOffsets *offsets);
 
 void gameControlSineFrequency(GameInput *input, GameAudioState *audio);
 
+// NOTE: Platform independent game memory
+
+typedef struct GameMemory {
+  uint8_t isInitialized;
+
+  uint64_t permanentStorageSize;
+  void *permanentStorage;
+
+  uint64_t transientStorageSize;
+  void *transientStorage;
+} gameMemory;
+
 #endif
