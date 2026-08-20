@@ -61,6 +61,8 @@ static int linuxResizeGamebuffer(Display *display, int screen,
   return 1;
 }
 
+#if HANDMADE_INTERNAL
+
 DEBUGReadFileResult DEBUGPlatformReadEntireFile(char *filename) {
   DEBUGReadFileResult result = {0};
 
@@ -105,6 +107,7 @@ void DEBUGPlatformFreeFileMemory(void *memory) { free(memory); }
 
 // uint8_t DEBUGPlatformWriteEntireFile(char *filename, uint32_t memorySize,
 // void *memory) {}
+#endif
 
 int main(void) {
   Display *display = XOpenDisplay(NULL); // Establish connection to X server
@@ -309,15 +312,10 @@ int main(void) {
 
     printf("Elapsed: %lld ns, %lld FPS\n", elapsed, fps);
   }
-  // NOTE: File I/O test.
-  DEBUGReadFileResult file = DEBUGPlatformReadEntireFile("data/io_test.txt");
 
-  if (file.contents) {
-    printf("test debug file io. Size: %ldB\n", file.contentsSize);
-    DEBUGPlatformFreeFileMemory(file.contents);
-  } else {
-    printf("no file\n");
-  }
+#if HANDMADE_INTERNAL
+  DEBUGFileIOTest();
+#endif
   audioShutdown(audio);
 
   XDestroyImage(buffer.image);

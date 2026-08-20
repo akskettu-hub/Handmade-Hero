@@ -35,9 +35,11 @@ typedef struct {
 
 void gameAudioGenerate(GameAudioState *audio, int frames);
 
+void DEBUGFileIOTest(void); // test of debug IO
+
 // NOTE: Services that the platform layer provides to the game.
 
-// #if HANDMADE_INTERNAL
+#if HANDMADE_INTERNAL
 typedef struct {
   size_t contentsSize;
   void *contents;
@@ -48,7 +50,7 @@ void DEBUGPlatformFreeFileMemory(void *memory);
 
 uint8_t DEBUGPlatformWriteEntireFile(char *filename, uint32_t memorySize,
                                      void *memory);
-// #endif
+#endif
 
 typedef struct {
   int up;

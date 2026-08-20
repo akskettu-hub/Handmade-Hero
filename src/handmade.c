@@ -70,3 +70,22 @@ void gameControlSineFrequency(GameInput *input, GameAudioState *audio) {
     }
   }
 }
+
+// NOTE: File I/O test.
+
+#if HANDMADE_INTERNAL
+
+void DEBUGFileIOTest() {
+  DEBUGReadFileResult file = DEBUGPlatformReadEntireFile("data/io_test.txt");
+
+  if (file.contents) {
+    printf("file.contentsSize: %ldB\n", file.contentsSize);
+    printf("file.contests:\n%s\n", (char *)file.contents);
+
+    DEBUGPlatformFreeFileMemory(file.contents);
+  } else {
+    printf("no file\n");
+  }
+}
+
+#endif
